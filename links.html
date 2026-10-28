@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="sq">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Lidhjet e ftesave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Pinyon+Script&display=swap">
+<style>
+:root{--wine:#561020;--wine-mid:#6e1a2b;--card:#fbf6ef;--ink:#4a1a22;--soft:#80605f;--gold:#b08650;--line:rgba(176,134,80,.35);color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#f3ebe0;color:var(--ink);font:400 18px/1.5 "Cormorant Garamond",Garamond,serif}
+.wrap{max-width:760px;margin:0 auto;padding:32px 16px 80px}
+h1{font:400 48px/1.1 "Pinyon Script",cursive;margin:0;color:var(--wine);text-align:center}
+.lead{text-align:center;color:var(--soft);font-style:italic;margin:6px 0 28px}
+.box{background:var(--card);border:1px solid var(--line);padding:22px 20px;margin-bottom:22px}
+h2{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin:0 0 14px;font-weight:600}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+label{display:block;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft);margin-bottom:4px}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:#fff;border:1px solid var(--line);padding:10px 12px;border-radius:0}
+textarea{min-height:110px;resize:vertical}
+input:focus,textarea:focus{outline:none;border-color:var(--wine)}
+button{font:600 12px/1 "Cormorant Garamond",serif;letter-spacing:.22em;text-transform:uppercase;padding:13px 16px;border:1px solid var(--wine);background:var(--wine);color:#f5e9d8;cursor:pointer;white-space:nowrap}
+button.ghost{background:transparent;color:var(--wine)}
+button:hover{background:var(--wine-mid);color:#f5e9d8}
+.tip{font-size:15.5px;color:var(--soft);font-style:italic;margin:10px 0 0}
+table{width:100%;border-collapse:collapse}
+td{padding:12px 6px;border-top:1px solid var(--line);vertical-align:top}
+td.n{width:52px;text-align:center;font-size:22px;color:var(--wine)}
+.url{display:block;font-size:13px;color:var(--soft);word-break:break-all;margin-top:2px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.acts button{padding:9px 10px;font-size:11px}
+.empty{color:var(--soft);font-style:italic;text-align:center;margin:8px 0}
+.total{display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-weight:600}
+@media (max-width:560px){tr{display:grid;grid-template-columns:40px 1fr}td.a{grid-column:1/-1;border-top:0;padding-top:0}.acts{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lidhjet e ftesave</h1>
+  <p class="lead">Për çdo mysafir krijohet një lidhje personale me emrin e tij në zarf dhe në ftesë.</p>
+
+  <div class="box">
+    <h2>Ftesë e re</h2>
+    <form id="one" class="row">
+      <div><label for="nm">Emri në ftesë</label><input id="nm" placeholder="p.sh. Familja Krasniqi" required maxlength="80"></div>
+      <button type="submit">Krijo</button>
+    </form>
+    <p class="tip">Ky emër shfaqet në zarf dhe në ftesë.</p>
+  </div>
+
+  <div class="box">
+    <h2>Shumë njëherësh</h2>
+    <label for="bulk">Një emër për rresht</label>
+    <textarea id="bulk" placeholder="Familja Gashi&#10;Arben dhe Teuta&#10;Drita Berisha"></textarea>
+    <p style="margin:10px 0 0"><button type="button" id="addBulk">Shto të gjitha</button></p>
+  </div>
+
+  <div class="box">
+    <h2>Ftesat</h2>
+    <table><tbody id="list"></tbody></table>
+    <p class="empty" id="empty">Ende asnjë ftesë.</p>
+    <div class="total" id="total" hidden><span>Ftesa gjithsej</span><span id="sum"></span></div>
+    <p style="margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="ghost" id="copyAll">Kopjo të gjitha</button><button type="button" class="ghost" id="clear">Fshij listën</button></p>
+    <p class="tip">Lista ruhet vetëm në këtë shfletues. Konfirmimet e mysafirëve shihen në Google Sheet.</p>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const BASE = location.origin + location.pathname.replace(/links(\.html)?$/, "");
+const enc = o => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(o)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const linkFor = g => BASE + "?f=" + enc({e: g.name});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const msgFor = g => `Të dashur ${g.name},\n\nMe shumë dashuri ju ftojmë në dasmën tonë më 28 mars 2027 në SOLÉ Restaurant, Ferizaj.\nFtesa juaj:\n${linkFor(g)}\n\nSara & Leon`;
+
+let list = [];
+try { list = JSON.parse(localStorage.getItem("ftesat") || "[]"); } catch (e) {}
+const save = () => { try { localStorage.setItem("ftesat", JSON.stringify(list)); } catch (e) {} };
+
+function add(name){
+  name = name.trim().slice(0, 80);
+  if (name) list.push({name});
+}
+function render(){
+  $("list").innerHTML = list.map((g, i) => `<tr>
+    <td class="n">${i + 1}</td>
+    <td>${esc(g.name)}<span class="url">${esc(linkFor(g))}</span></td>
+    <td class="a"><div class="acts">
+      <button type="button" data-a="copy" data-i="${i}">Kopjo</button>
+      <button type="button" data-a="wa" data-i="${i}">WhatsApp</button>
+      <button type="button" data-a="open" data-i="${i}" class="ghost">Shiko</button>
+      <button type="button" data-a="del" data-i="${i}" class="ghost" aria-label="Fshij">✕</button>
+    </div></td></tr>`).join("");
+  $("empty").hidden = list.length > 0;
+  $("total").hidden = !list.length;
+  $("sum").textContent = list.length;
+}
+async function copy(text, btn){
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+  if (btn){ const o = btn.textContent; btn.textContent = "U kopjua"; setTimeout(() => btn.textContent = o, 1400); }
+}
+
+$("one").addEventListener("submit", e => { e.preventDefault(); add($("nm").value); save(); render(); $("nm").value = ""; $("nm").focus(); });
+$("addBulk").addEventListener("click", () => {
+  $("bulk").value.split(/\n+/).forEach(line => {
+    add(line.replace(/[,;\t]\s*\d+\s*$/, ""));
+  });
+  $("bulk").value = ""; save(); render();
+});
+$("list").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const g = list[+b.dataset.i];
+  if (b.dataset.a === "copy") copy(linkFor(g), b);
+  if (b.dataset.a === "wa") window.open("https://wa.me/?text=" + encodeURIComponent(msgFor(g)), "_blank", "noopener");
+  if (b.dataset.a === "open") window.open(linkFor(g), "_blank", "noopener");
+  if (b.dataset.a === "del"){ list.splice(+b.dataset.i, 1); save(); render(); }
+});
+$("copyAll").addEventListener("click", e => copy(list.map(g => `${g.name}: ${linkFor(g)}`).join("\n"), e.target));
+$("clear").addEventListener("click", () => { if (confirm("Të fshihet e gjithë lista?")){ list = []; save(); render(); } });
+render();
+</script>
+</body>
+</html>
